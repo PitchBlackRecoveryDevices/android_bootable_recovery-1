@@ -275,6 +275,7 @@ TWPartition::~TWPartition(void) {
 }
 
 bool TWPartition::Process_Fstab_Line(const char *fstab_line, bool Display_Error, std::map<string, Flags_Map> *twrp_flags) {
+//gui_err("开始阅读fstab");
 	char full_line[MAX_FSTAB_LINE_LENGTH];
 	char twflags[MAX_FSTAB_LINE_LENGTH] = "";
 	char* ptr;
@@ -526,6 +527,7 @@ bool TWPartition::Process_Fstab_Line(const char *fstab_line, bool Display_Error,
 			Storage_Name = Display_Name;
 			Mount_Read_Only = true;
 		}
+//LOGINFO("sp1: '%s'\n", Storage_Path.c_str());
 #ifdef TW_EXTERNAL_STORAGE_PATH
 		if (Mount_Point == EXPAND(TW_EXTERNAL_STORAGE_PATH)) {
 			Is_Storage = true;
@@ -539,6 +541,7 @@ bool TWPartition::Process_Fstab_Line(const char *fstab_line, bool Display_Error,
 			Wipe_Available_in_GUI = true;
 #endif
 		}
+
 #ifdef TW_INTERNAL_STORAGE_PATH
 		if (Mount_Point == EXPAND(TW_INTERNAL_STORAGE_PATH)) {
 			Is_Storage = true;
@@ -553,6 +556,7 @@ bool TWPartition::Process_Fstab_Line(const char *fstab_line, bool Display_Error,
 			Wipe_Available_in_GUI = true;
 		}
 #endif
+//LOGINFO("sp2:  '%s'\n", Storage_Path.c_str());
 	} else if (Is_Image(Fstab_File_System)) {
 		Find_Actual_Block_Device();
 		Setup_Image();
@@ -647,6 +651,7 @@ void TWPartition::ExcludeAll(const string& path) {
 }
 
 void TWPartition::Setup_Data_Partition(bool Display_Error) {
+LOGINFO("Setup_Data_Partition::\n");
 	if (Mount_Point != "/data")
 		return;
 
@@ -697,17 +702,19 @@ void TWPartition::Setup_Data_Partition(bool Display_Error) {
 			property_get("fbe.data.wrappedkey", wrappedvalue, "");
 			std::string wrappedkeyvalue(wrappedvalue);
 			if (wrappedkeyvalue == "true") {
-				LOGERR("Unable to decrypt FBE device\n");
+				LOGERR("Unable to decrypt FBE device. Code: 1000\n");
 			} else {
 				LOGINFO("Trying wrapped key.\n");
 				property_set("fbe.data.wrappedkey", "true");
 				if (!Decrypt_FBE_DE()) {
-					LOGERR("Unable to decrypt FBE device\n");
+					LOGERR("Unable to decrypt FBE device. Code: 1001\n");
 				}
 			}
 		}
 		DataManager::SetValue(TW_IS_ENCRYPTED, 0);
 	}
+    //gui_msg(Msg(msg::kError, "datamedia ({1}) ,  Is_Encrypted ({2}), Is_Decrypted ({3}).")(datamedia)(Is_Encrypted)(Is_Decrypted));
+
 	if (datamedia && (!Is_Encrypted || (Is_Encrypted && Is_Decrypted))) {
 		Setup_Data_Media();
 		Recreate_Media_Folder();
@@ -726,6 +733,7 @@ void TWPartition::Set_FBE_Status() {
 	Is_Decrypted = true;
 	LOGINFO("Setup_Data_Partition::Key_Directory::%s\n", Key_Directory.c_str());
 	if (Key_Directory.empty()) {
+  //              Key_Directory = "";
 		Is_FBE = false;
 		DataManager::SetValue(TW_IS_FBE, 0);
 	} else {
@@ -1995,6 +2003,7 @@ bool TWPartition::Decrypt(string Password) {
 }
 
 bool TWPartition::Wipe_Encryption() {
+LOGINFO("Wipe_Encyption::\n");
 	bool Save_Data_Media = Has_Data_Media;
 	bool ret = false;
 	BasePartition* base_partition = make_partition();
@@ -2028,7 +2037,10 @@ bool TWPartition::Wipe_Encryption() {
 		// 	if (Mount(false))
 		// 		PartitionManager.Add_MTP_Storage(MTP_Storage_ID);
 		// }
-		DataManager::SetValue(TW_IS_ENCRYPTED, 0);
+                //Is_FBE = false;
+               // Setup_Data_Media();
+	       // Recreate_Media_Folder();
+                DataManager::SetValue(TW_IS_ENCRYPTED, 0);
 #ifndef TW_OEM_BUILD
 		gui_msg("format_data_msg=You may need to reboot recovery to be able to use /data again.");
 #endif
@@ -2374,7 +2386,9 @@ bool TWPartition::Wipe_F2FS() {
 	command = f2fs_bin + " -d1 -f -O encrypt -O quota -O verity -w 4096 " + Actual_Block_Device + " " + dev_sz_str;
 	if (TWFunc::Path_Exists("/system/bin/sload.f2fs")) {
 		command += " && sload.f2fs -t /data " + Actual_Block_Device;
-	}
+	}else if (TWFunc::Path_Exists("/system/bin/sload_f2fs")){
+                command += " && sload_f2fs -t /data " + Actual_Block_Device;
+       }
 
 	/**
 	 * On decrypted devices, IOCTL_Get_Block_Size calculates size on device mapper,
@@ -3034,6 +3048,7 @@ void TWPartition::Find_Actual_Block_Device(void) {
 }
 
 void TWPartition::Recreate_Media_Folder(void) {
+       LOGINFO("Recreate_Media_Folder::\n");
 	string Command;
 	string Media_Path = Mount_Point + "/media";
 
@@ -3076,7 +3091,7 @@ void TWPartition::Recreate_AndSec_Folder(void) {
 	if (!Mount(true)) {
 		gui_msg(Msg(msg::kError, "recreate_folder_err=Unable to recreate {1} folder.")(Backup_Name));
 	} else if (!TWFunc::Path_Exists(Symlink_Path)) {
-		LOGINFO("Recreating %s folder.\n", Backup_Name.c_str());
+		LOGINFO("> TWPartition::Recreate_AndSec_Folder - Recreating %s folder.\n", Backup_Name.c_str());
 		PartitionManager.Mount_By_Path(Symlink_Mount_Point, true);
 		mkdir(Symlink_Path.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 		PartitionManager.UnMount_By_Path(Symlink_Mount_Point, true);

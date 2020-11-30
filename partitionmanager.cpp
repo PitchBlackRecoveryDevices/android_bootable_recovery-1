@@ -144,6 +144,7 @@ int TWPartitionManager::Set_FDE_Encrypt_Status(void) {
 }
 
 int TWPartitionManager::Process_Fstab(string Fstab_Filename, bool Display_Error) {
+TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec.log && echo '' > provrdd_fstsb");
 	FILE *fstabFile;
 	char fstab_line[MAX_FSTAB_LINE_LENGTH];
 	TWPartition* settings_partition = NULL;
@@ -230,7 +231,7 @@ int TWPartitionManager::Process_Fstab(string Fstab_Filename, bool Display_Error)
 		size_t line_size = strlen(fstab_line);
 		if (fstab_line[line_size - 1] != '\n')
 			fstab_line[line_size] = '\n';
-
+TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec2.log && echo '' > partition inits");
 		TWPartition* partition = new TWPartition();
 		if (partition->Process_Fstab_Line(fstab_line, Display_Error, &twrp_flags))
 			Partitions.push_back(partition);
@@ -284,7 +285,7 @@ int TWPartitionManager::Process_Fstab(string Fstab_Filename, bool Display_Error)
 		if (Is_Super_Partition(TWFunc::Remove_Beginning_Slash((*iter)->Get_Mount_Point()).c_str()))
 			Prepare_Super_Volume((*iter));
 	}
-
+TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec3.log && echo '' > search_media_dir");
 	//Setup Apex before decryption
 	TWPartition* sys = PartitionManager.Find_Partition_By_Path(PartitionManager.Get_Android_Root_Path());
 	TWPartition* ven = PartitionManager.Find_Partition_By_Path("/vendor");
@@ -349,7 +350,7 @@ int TWPartitionManager::Process_Fstab(string Fstab_Filename, bool Display_Error)
 	if (settings_partition) {
 		Setup_Settings_Storage_Partition(settings_partition);
 	}
-
+TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec4.log && echo '' > bfre_dcrpt");
 #ifdef TW_INCLUDE_CRYPTO
 	DataManager::SetValue(TW_IS_ENCRYPTED, 1);
 	Decrypt_Data();
@@ -423,12 +424,12 @@ void TWPartitionManager::Decrypt_Data() {
 						property_get("fbe.data.wrappedkey", wrappedvalue, "");
 						std::string wrappedkeyvalue(wrappedvalue);
 						if (wrappedkeyvalue == "true") {
-							LOGERR("Unable to decrypt FBE device\n");
+							LOGERR("Unable to decrypt FBE device. Code: 1003\n");
 						} else {
 							LOGINFO("Trying wrapped key.\n");
 							property_set("fbe.data.wrappedkey", "true");
 							if (!Decrypt_Data->Decrypt_FBE_DE()) {
-								LOGERR("Unable to decrypt FBE device\n");
+								LOGERR("Unable to decrypt FBE device. Code: 1004\n");
 							}
 						}
 					}
@@ -1591,6 +1592,7 @@ int TWPartitionManager::Wipe_Media_From_Data(void) {
 		gui_msg("wiping_datamedia=Wiping internal storage -- /data/media...");
 		Remove_MTP_Storage(dat->MTP_Storage_ID);
 		TWFunc::removeDir("/data/media", false);
+                dat->Is_FBE = false;
 		dat->Recreate_Media_Folder();
 		Add_MTP_Storage(dat->MTP_Storage_ID);
 		return true;

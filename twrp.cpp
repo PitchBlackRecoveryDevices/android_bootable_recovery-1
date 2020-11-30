@@ -121,10 +121,17 @@ static void process_recovery_mode(twrpAdbBuFifo* adb_bu_fifo, bool skip_decrypti
 		fstab_filename = "/etc/recovery.fstab";
 	}
 	printf("=> Processing %s\n", fstab_filename.c_str());
+// try
+//{
 	if (!PartitionManager.Process_Fstab(fstab_filename, 1)) {
 		LOGERR("Failing out of recovery due to problem with fstab.\n");
 		return;
 	}
+//
+//}catch ( std::exception const &e ) {
+// LOGERR("ERRORRRRRRRRRRR.\n");
+//return;
+//}
 	PartitionManager.Output_Partition_Logging();
 
 // We are doing this here to allow super partition to be set up prior to overriding properties
@@ -295,7 +302,7 @@ int main(int argc, char **argv) {
 	Log_Offset = 0;
 
 	// Set up temporary log file (/tmp/recovery.log)
-	freopen(TMP_LOG_FILE, "a", stdout);
+       freopen(TMP_LOG_FILE, "a", stdout);
 	setbuf(stdout, NULL);
 	freopen(TMP_LOG_FILE, "a", stderr);
 	setbuf(stderr, NULL);

@@ -90,6 +90,8 @@ LOCAL_C_INCLUDES += \
     system/core/init/ \
     system/extras/ext4_utils/include
 
+#LOCAL_CPP_FEATURES += exceptions
+
 ifneq ($(TARGET_RECOVERY_REBOOT_SRC),)
   LOCAL_SRC_FILES += $(TARGET_RECOVERY_REBOOT_SRC)
 endif
