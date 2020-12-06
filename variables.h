@@ -167,6 +167,6 @@
 #define SCRIPT_FILE_TMP "/tmp/openrecoveryscript"
 //#include <string.h>
 //char ch = 'A' + random()%26;
-#define TMP_LOG_FILE "/cache/recovery-f2fs.log"
+#define TMP_LOG_FILE "/tmp/recovery.log"
 
 #endif  // _VARIABLES_HEADER_

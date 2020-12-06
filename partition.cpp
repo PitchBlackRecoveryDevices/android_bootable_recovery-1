@@ -268,6 +268,7 @@ TWPartition::TWPartition() {
 	SlotSelect = false;
 	Key_Directory = "";
 	Is_Super = false;
+    userdata_blk = "";
 }
 
 TWPartition::~TWPartition(void) {
@@ -275,7 +276,6 @@ TWPartition::~TWPartition(void) {
 }
 
 bool TWPartition::Process_Fstab_Line(const char *fstab_line, bool Display_Error, std::map<string, Flags_Map> *twrp_flags) {
-//gui_err("开始阅读fstab");
 	char full_line[MAX_FSTAB_LINE_LENGTH];
 	char twflags[MAX_FSTAB_LINE_LENGTH] = "";
 	char* ptr;
@@ -361,6 +361,7 @@ bool TWPartition::Process_Fstab_Line(const char *fstab_line, bool Display_Error,
 			} else {
 				Primary_Block_Device = ptr;
 				Find_Real_Block_Device(Primary_Block_Device, Display_Error);
+                
 			}
 			item_index++;
 		} else if (item_index > 2) {
@@ -379,6 +380,7 @@ bool TWPartition::Process_Fstab_Line(const char *fstab_line, bool Display_Error,
 				// Alternate Block Device
 				Alternate_Block_Device = ptr;
 				Find_Real_Block_Device(Alternate_Block_Device, Display_Error);
+                
 			} else if (strlen(ptr) > 7 && strncmp(ptr, "length=", 7) == 0) {
 				// Partition length
 				ptr += 7;
@@ -405,6 +407,7 @@ bool TWPartition::Process_Fstab_Line(const char *fstab_line, bool Display_Error,
 			if (!it->second.Primary_Block_Device.empty()) {
 				Primary_Block_Device = it->second.Primary_Block_Device;
 				Find_Real_Block_Device(Primary_Block_Device, Display_Error);
+               
 			}
 			if (!it->second.Alternate_Block_Device.empty()) {
 				Alternate_Block_Device = it->second.Alternate_Block_Device;
@@ -651,10 +654,9 @@ void TWPartition::ExcludeAll(const string& path) {
 }
 
 void TWPartition::Setup_Data_Partition(bool Display_Error) {
-LOGINFO("Setup_Data_Partition::\n");
 	if (Mount_Point != "/data")
 		return;
-
+//	TWFunc::Exec_Cmd("echo 'setiup_data_partition 657\n' && cp /tmp/recovery.log /cache/recf2fs.log");
 	// Ensure /data is not mounted as tmpfs for qcom hardware decrypt
 	UnMount(false);
 
@@ -669,7 +671,7 @@ LOGINFO("Setup_Data_Partition::\n");
 		Decrypted_Block_Device = crypto_blkdev;
 		LOGINFO("Data already decrypted, new block device: '%s'\n", crypto_blkdev);
 		DataManager::SetValue(TW_IS_ENCRYPTED, 0);
-	} else if (!Mount(false)) {
+	} else if (!Mount(true)) {
 		if (Is_Present) {
 			if (Key_Directory.empty()) {
 				set_partition_data(Actual_Block_Device.c_str(), Crypto_Key_Location.c_str(),
@@ -813,7 +815,7 @@ void TWPartition::Setup_Cache_Partition(bool Display_Error __unused) {
 	if (!Mount(true))
 		return;
 
-	if (!TWFunc::Path_Exists("/cache/recovery/.")) {
+	if (!TWFunc::Path_Exists("/cache/recovery/")) {
 		LOGINFO("Recreating /cache/recovery folder\n");
 		if (mkdir("/cache/recovery", S_IRWXU | S_IRWXG | S_IWGRP | S_IXGRP) != 0)
 			LOGERR("Could not create /cache/recovery\n");
@@ -881,6 +883,7 @@ void TWPartition::Save_FS_Flags(const string& local_File_System, int local_Mount
 }
 
 void TWPartition::Apply_TW_Flag(const unsigned flag, const char* str, const bool val) {
+	
 	switch (flag) {
 		case TWFLAG_ANDSEC:
 			Has_Android_Secure = val;
@@ -1007,6 +1010,8 @@ void TWPartition::Apply_TW_Flag(const unsigned flag, const char* str, const bool
 			Alternate_Block_Device = str;
 			break;
 		case TWFLAG_KEYDIRECTORY:
+			LOGINFO("set keydir flag -> %s\n",str);
+			TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
 			Key_Directory = str;
 			break;
 		default:
@@ -1017,7 +1022,8 @@ void TWPartition::Apply_TW_Flag(const unsigned flag, const char* str, const bool
 }
 
 void TWPartition::Process_TW_Flags(char *flags, bool Display_Error, int fstab_ver) {
-	char separator[2] = {'\n', 0};
+	
+        char separator[2] = {'\n', 0};
 	char *ptr, *savep;
 	char source_separator = ';';
 
@@ -1236,10 +1242,14 @@ void TWPartition::Find_Real_Block_Device(string& Block, bool Display_Error) {
 			LOGINFO("Invalid symlink path '%s' found on block device '%s'\n", device, Block.c_str());
 		return;
 	} else {
+        // get userdata real, need to compare when mount
 		Block = device;
+        
 		return;
 	}
 }
+
+
 
 bool TWPartition::Mount_Storage_Retry(bool Display_Error) {
 	// On some devices, storage doesn't want to mount right away, retry and sleep
@@ -1566,39 +1576,45 @@ bool TWPartition::Mount(bool Display_Error) {
 	}
 
 	string mount_fs = Current_File_System;
+
+    string userdata_block =  TWFunc::get_Real_Block_Device("/dev/block/by-name/userdata");
+    // we dont mount directly mount sda block, userdata will be mount with mount dm-4
+    if (Actual_Block_Device == "/dev/block/sda34"){ // if key no existe, we continue to mount...
+        if(mount("/dev/block/by-name/userdata", "/metadata", "ext4", MS_REMOUNT, NULL) == 0){
+            LOGINFO("-- Mount ok");
+        
+            if(TWFunc::Path_Exists("/metadata/vold/metadata_encryption"))
+                 LOGINFO("-- encrypt data");
+                return false;
+    
+        }else{
+            LOGINFO("Mount failed");
+        }
+
+        
+
+    }       
+       
+    
+    
 	if (Current_File_System == "exfat" && TWFunc::Path_Exists("/sys/module/texfat"))
 		mount_fs = "texfat";
 
+//	TWFunc::Exec_Cmd("echo 'Here start mount..%s.\n' && cp /tmp/recovery.log /cache/recf2fs.log", Mount_Point.c_str());
 	if (!exfat_mounted &&
 		mount(Actual_Block_Device.c_str(), Mount_Point.c_str(), mount_fs.c_str(), flags, Mount_Options.c_str()) != 0 &&
 		mount(Actual_Block_Device.c_str(), Mount_Point.c_str(), mount_fs.c_str(), flags, NULL) != 0) {
-#ifdef TW_NO_EXFAT_FUSE
-		if (Current_File_System == "exfat") {
-			LOGINFO("Mounting exfat failed, trying vfat...\n");
-			if (mount(Actual_Block_Device.c_str(), Mount_Point.c_str(), "vfat", 0, NULL) != 0) {
-				if (Display_Error)
-					gui_msg(Msg(msg::kError, "fail_mount=Failed to mount '{1}' ({2})")(Mount_Point)(strerror(errno)));
-				else
-					LOGINFO("Unable to mount '%s'\n", Mount_Point.c_str());
-				LOGINFO("Actual block device: '%s', current file system: '%s', flags: 0x%8x, options: '%s'\n", Actual_Block_Device.c_str(), Current_File_System.c_str(), flags, Mount_Options.c_str());
-				return false;
-			}
-		} else {
-#endif
 			if (!Removable && Display_Error)
 				gui_msg(Msg(msg::kError, "fail_mount=Failed to mount '{1}' ({2})")(Mount_Point)(strerror(errno)));
 			else
 				LOGINFO("Unable to mount '%s'\n", Mount_Point.c_str());
-			LOGINFO("Actual block device: '%s', current file system: '%s'\n", Actual_Block_Device.c_str(), Current_File_System.c_str());
-			return false;
-#ifdef TW_NO_EXFAT_FUSE
-		}
-#endif
+        LOGINFO("Actual block device: '%s', current file system: '%s'\n", Actual_Block_Device.c_str(), Current_File_System.c_str());		
+return false;
 	}
 
 	if (Removable)
 		Update_Size(Display_Error);
-
+TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
 	if (!Symlink_Mount_Point.empty() && TWFunc::Path_Exists(Symlink_Path)) {
 		string Command = "/system/bin/mount -o bind '" + Symlink_Path + "' '" + Symlink_Mount_Point + "'";
 		TWFunc::Exec_Cmd(Command);
@@ -1710,6 +1726,8 @@ bool TWPartition::Wipe(string New_File_System) {
 	if (wiped) {
 		if (Mount_Point == "/cache" && TWFunc::get_log_dir() != DATA_LOGS_DIR)
 			DataManager::Output_Version();
+        if (Mount_Point == "/data" )
+            Is_Decrypted = false;
 
 		if (update_crypt) {
 			Setup_File_System(false);
@@ -2031,15 +2049,21 @@ LOGINFO("Wipe_Encyption::\n");
 	Decrypted_Block_Device = "";
 	Is_Decrypted = false;
 	Is_Encrypted = false;
+    Is_FBE = false;
 	if (Wipe(Fstab_File_System)) {
 		Has_Data_Media = Save_Data_Media;
 		// if (Has_Data_Media && !Symlink_Mount_Point.empty()) {
 		// 	if (Mount(false))
 		// 		PartitionManager.Add_MTP_Storage(MTP_Storage_ID);
 		// }
-                //Is_FBE = false;
-               // Setup_Data_Media();
-	       // Recreate_Media_Folder();
+              
+              if (Mount(true)){
+   Setup_Data_Media();
+	             Recreate_Media_Folder();
+	             PartitionManager.Add_MTP_Storage(MTP_Storage_ID);
+              
+              }
+
                 DataManager::SetValue(TW_IS_ENCRYPTED, 0);
 #ifndef TW_OEM_BUILD
 		gui_msg("format_data_msg=You may need to reboot recovery to be able to use /data again.");

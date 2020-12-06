@@ -163,6 +163,7 @@ public:
 	string Current_File_System;                                               // Current file system
 	string Actual_Block_Device;                                               // Actual block device (one of primary, alternate, or decrypted)
 	string Backup_Display_Name;                                               // Name displayed in the partition list for backup selection
+    string userdata_blk;
 	string MTD_Name;                                                          // Name of the partition for MTD devices
 	bool Is_Present;                                                          // Indicates if the partition is currently present as a block device
 	string Crypto_Key_Location;                                               // Location of the crypto key used for decrypting encrypted data partitions
