@@ -240,6 +240,7 @@ GUIAction::GUIAction(xml_node<>* node)
 		ADD_ACTION(uninstalltwrpsystemapp);
 		ADD_ACTION(repackimage);
 		ADD_ACTION(fixabrecoverybootloop);
+        ADD_ACTION(flashzip);
 	}
 
 	// First, get the action
@@ -368,6 +369,23 @@ void GUIAction::simulate_progress_bar(void)
 		usleep(500000);
 		DataManager::SetValue("ui_progress", i * 20);
 	}
+}
+
+int GUIAction::flashzip(std::string arg __unused){
+
+	
+    int op_status = 0;
+
+	operation_start("Flash");
+	string filename;
+ DataManager::GetValue("tw_filename", filename);
+	if (flash_zip(filename, 0))
+		op_status = 0; // success
+	else
+		op_status = 1; // fail
+
+	operation_end(op_status);
+	return 0;
 }
 
 int GUIAction::flash_zip(std::string filename, int* wipe_cache)
@@ -1097,6 +1115,9 @@ int GUIAction::flash(std::string arg)
 	return 0;
 }
 
+
+
+
 int GUIAction::wipe(std::string arg)
 {
 	operation_start("Format");
@@ -1608,8 +1629,10 @@ int GUIAction::adbsideload(std::string arg __unused)
 					PartitionManager.Wipe_By_Path("/cache");
 				if (wipe_dalvik)
 					PartitionManager.Wipe_Dalvik_Cache();
+LOGINFO("#2");
 			} else {
 				ret = 1; // failure
+                LOGINFO("#3");
 			}
 		}
 		if (sideload_child_pid) {

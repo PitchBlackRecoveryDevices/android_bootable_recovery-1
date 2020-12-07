@@ -699,7 +699,14 @@ void TWPartition::Setup_Data_Partition(bool Display_Error) {
 		}
 	} else {
 		Set_FBE_Status();
-		if (!Decrypt_FBE_DE()) {
+        bool keyfile = true;
+        mount("/dev/block/sda18", "/metadata", "ext4", 0, NULL);
+        if(!TWFunc::Path_Exists("/metadata/vold/metadata_encryption")){
+           keyfile = false;
+        }
+
+
+		if (!Decrypt_FBE_DE() && keyfile) {
 			char wrappedvalue[PROPERTY_VALUE_MAX];
 			property_get("fbe.data.wrappedkey", wrappedvalue, "");
 			std::string wrappedkeyvalue(wrappedvalue);
@@ -1011,7 +1018,7 @@ void TWPartition::Apply_TW_Flag(const unsigned flag, const char* str, const bool
 			break;
 		case TWFLAG_KEYDIRECTORY:
 			LOGINFO("set keydir flag -> %s\n",str);
-			TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
+			//TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
 			Key_Directory = str;
 			break;
 		default:
@@ -1577,22 +1584,14 @@ bool TWPartition::Mount(bool Display_Error) {
 
 	string mount_fs = Current_File_System;
 
-    string userdata_block =  TWFunc::get_Real_Block_Device("/dev/block/by-name/userdata");
+    //string userdata_block =  TWFunc::get_Real_Block_Device("/dev/block/by-name/userdata");
     // we dont mount directly mount sda block, userdata will be mount with mount dm-4
     if (Actual_Block_Device == "/dev/block/sda34"){ // if key no existe, we continue to mount...
-        if(mount("/dev/block/by-name/userdata", "/metadata", "ext4", MS_REMOUNT, NULL) == 0){
-            LOGINFO("-- Mount ok");
-        
-            if(TWFunc::Path_Exists("/metadata/vold/metadata_encryption"))
-                 LOGINFO("-- encrypt data");
-                return false;
-    
-        }else{
-            LOGINFO("Mount failed");
+        mount("/dev/block/sda18", "/metadata", "ext4", 0, NULL);
+        if(TWFunc::Path_Exists("/metadata/vold/metadata_encryption")){
+           LOGINFO("-- encrypt data\n");
+           return false;
         }
-
-        
-
     }       
        
     
@@ -1614,7 +1613,7 @@ return false;
 
 	if (Removable)
 		Update_Size(Display_Error);
-TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
+//TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
 	if (!Symlink_Mount_Point.empty() && TWFunc::Path_Exists(Symlink_Path)) {
 		string Command = "/system/bin/mount -o bind '" + Symlink_Path + "' '" + Symlink_Mount_Point + "'";
 		TWFunc::Exec_Cmd(Command);
@@ -2058,10 +2057,9 @@ LOGINFO("Wipe_Encyption::\n");
 		// }
               
               if (Mount(true)){
-   Setup_Data_Media();
+                 Setup_Data_Media();
 	             Recreate_Media_Folder();
 	             PartitionManager.Add_MTP_Storage(MTP_Storage_ID);
-              
               }
 
                 DataManager::SetValue(TW_IS_ENCRYPTED, 0);

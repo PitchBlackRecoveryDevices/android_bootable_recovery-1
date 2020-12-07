@@ -374,6 +374,7 @@ protected:
 	int enableadb(std::string arg);
 	int enablefastboot(std::string arg);
 	int simulate;
+   int flashzip(std::string arg);
 };
 
 class GUIButton : public GUIObject, public RenderObject, public ActionObject

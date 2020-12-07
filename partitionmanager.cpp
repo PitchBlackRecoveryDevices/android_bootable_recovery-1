@@ -144,8 +144,8 @@ int TWPartitionManager::Set_FDE_Encrypt_Status(void) {
 }
 
 int TWPartitionManager::Process_Fstab(string Fstab_Filename, bool Display_Error) {
-TWFunc::Update_Log_File();
-TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec.log && echo '' > provrdd_fstsb");
+//TWFunc::Update_Log_File();
+//TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec.log && echo '' > provrdd_fstsb");
 	FILE *fstabFile;
 	char fstab_line[MAX_FSTAB_LINE_LENGTH];
 	TWPartition* settings_partition = NULL;
@@ -212,7 +212,7 @@ TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec.log && echo '' > provrdd_fstsb
 		}
 		fclose(fstabFile);
 	}
-TWFunc::Exec_Cmd("echo 'stary read fstab file..\n' && cp /tmp/recovery.log /cache/recf2fs.log");
+//TWFunc::Exec_Cmd("echo 'stary read fstab file..\n' && cp /tmp/recovery.log /cache/recf2fs.log");
 	fstabFile = fopen(Fstab_Filename.c_str(), "rt");
 	if (fstabFile == NULL) {
 		LOGERR("Critical Error: Unable to open fstab at '%s'.\n", Fstab_Filename.c_str());
@@ -236,16 +236,16 @@ TWFunc::Exec_Cmd("echo 'stary read fstab file..\n' && cp /tmp/recovery.log /cach
 	TWPartition* partition = new TWPartition();
 		if (partition->Process_Fstab_Line(fstab_line, Display_Error, &twrp_flags)){
 			Partitions.push_back(partition);
-			LOGINFO("partition -> %s  - ok \n",partition->Mount_Point.c_str());
-			TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
+//			LOGINFO("partition -> %s  - ok \n",partition->Mount_Point.c_str());
+//			TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
 		} else
 			delete partition;
 
 		memset(fstab_line, 0, sizeof(fstab_line));
 	}
 	fclose(fstabFile);
-LOGINFO("All partiton are created.\n");
-TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
+//LOGINFO("All partiton are created.\n");
+//TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
 
 	if (twrp_flags.size() > 0) {
 		LOGINFO("Processing remaining twrp.flags\n");
@@ -264,7 +264,7 @@ TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
 		}
 	}
 	if (Get_Super_Status()) {
-		TWFunc::Exec_Cmd("echo 'setip_super_devices\n' && cp /tmp/recovery.log /cache/recf2fs.log");
+//		TWFunc::Exec_Cmd("echo 'setip_super_devices\n' && cp /tmp/recovery.log /cache/recf2fs.log");
 		Setup_Super_Devices();
 	}
 	LOGINFO("Done processing fstab files\n");
@@ -291,9 +291,9 @@ TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/recf2fs.log");
 		if (Is_Super_Partition(TWFunc::Remove_Beginning_Slash((*iter)->Get_Mount_Point()).c_str()))
 			Prepare_Super_Volume((*iter));
 	}
-TWFunc::Update_Log_File();
+//TWFunc::Update_Log_File();
 
-TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec3.log && echo '' > search_media_dir");
+//TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec3.log && echo '' > search_media_dir");
 	//Setup Apex before decryption
 	TWPartition* sys = PartitionManager.Find_Partition_By_Path(PartitionManager.Get_Android_Root_Path());
 	TWPartition* ven = PartitionManager.Find_Partition_By_Path("/vendor");
@@ -361,7 +361,7 @@ TWFunc::Update_Log_File();
 	if (settings_partition) {
 		Setup_Settings_Storage_Partition(settings_partition);
 	}
-TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec4.log && echo '' > bfre_dcrpt");
+//TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec4.log && echo '' > bfre_dcrpt");
 #ifdef TW_INCLUDE_CRYPTO
 	DataManager::SetValue(TW_IS_ENCRYPTED, 1);
 	Decrypt_Data();

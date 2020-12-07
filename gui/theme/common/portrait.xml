@@ -3765,7 +3765,13 @@
 
 			<listbox style="advanced_listbox">
 				<placement x="%indent%" y="%row13a_y%" w="%content_width%" h="%listbox_advanced_height%"/>
-				<listitem name="{@decrypt_users=Decrypt Users}">
+				
+
+
+
+
+
+                <listitem name="{@decrypt_users=Decrypt Users}">
 					<conditions>
 						<condition var1="tw_is_fbe" var2="1"/>
 						<condition var1="tw_all_users_decrypted" var2="0"/>
