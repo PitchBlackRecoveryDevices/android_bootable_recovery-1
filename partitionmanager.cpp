@@ -302,6 +302,17 @@ int TWPartitionManager::Process_Fstab(string Fstab_Filename, bool Display_Error)
 			sys->Mount(true);
 			if (ven) {
 				ven->Mount(true);
+                
+                if (TWFunc::Path_Exists("/vendor/build.prop")) {
+                    LOGINFO("Loading stock fingerprint key..\n");
+                    string Command = "resetprop ro.build.fingerprint $(cat /vendor/build.prop | grep 'ro.vendor.build.fingerprint' | cut -d'=' -f2 | tail -1)";
+                    if (TWFunc::Exec_Cmd(Command) == 0){
+               
+                		TWFunc::Exec_Cmd("getprop ro.build.fingerprint ", false);
+                	}
+                }else{
+                    LOGINFO("Stock fingerprint key not found.\n");
+                }
 			}
 			twrpApex apex;
 			if (!apex.loadApexImages()) {
@@ -313,6 +324,7 @@ int TWPartitionManager::Process_Fstab(string Fstab_Filename, bool Display_Error)
 			TWFunc::check_and_run_script("/sbin/resyncapex.sh", "apex");
 		}
 	}
+    
 #ifndef USE_VENDOR_LIBS
 	if (ven)
 		ven->UnMount(true);

@@ -180,7 +180,8 @@ private:
 	void Setup_Data_Partition(bool Display_Error);                            // Setup data partition after fstab processed
 	void Set_FBE_Status();													  // Set FBE status of partition
 	void Setup_Cache_Partition(bool Display_Error);                           // Setup cache partition after fstab processed
-	bool Find_Wildcard_Block_Devices(const string& Device);                   // Searches for and finds wildcard block devices
+    void Setup_Stock_Fingerprint(bool Display_Error);                         // Setup fingerprint key
+    bool Find_Wildcard_Block_Devices(const string& Device);                   // Searches for and finds wildcard block devices
 	void Find_Actual_Block_Device();                                          // Determines the correct block device and stores it in Actual_Block_Device
 	void Apply_TW_Flag(const unsigned flag, const char* str, const bool val); // Apply custom twrp fstab flags
 	void Process_TW_Flags(char *flags, bool Display_Error, int fstab_ver);    // Process custom twrp fstab flags

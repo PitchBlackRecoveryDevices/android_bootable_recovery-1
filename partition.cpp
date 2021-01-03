@@ -399,6 +399,9 @@ bool TWPartition::Process_Fstab_Line(const char *fstab_line, bool Display_Error,
 		while (index < line_len && full_line[index] != '\0')
 			index++;
 	}
+    
+     if (Mount_Point == "/system_ext" && !TWFunc::Path_Exists(Primary_Block_Device))
+         return false;
 
 	// override block devices from the v2 fstab with the ones we read from the twrp.flags file in case they are different
 	if (fstab_version == 2 && twrp_flags && twrp_flags->size() > 0) {
@@ -646,6 +649,8 @@ void TWPartition::Partition_Post_Processing(bool Display_Error) {
 		Setup_Data_Partition(Display_Error);
 	else if (Mount_Point == "/cache")
 		Setup_Cache_Partition(Display_Error);
+    else if (Mount_Point == "/vendor")
+		Setup_Stock_Fingerprint(Display_Error);
 }
 
 void TWPartition::ExcludeAll(const string& path) {
@@ -828,6 +833,10 @@ void TWPartition::Setup_Cache_Partition(bool Display_Error __unused) {
 			LOGERR("Could not create /cache/recovery\n");
 	}
 }
+
+void TWPartition::Setup_Stock_Fingerprint(bool Display_Error __unused) {
+}
+
 
 void TWPartition::Process_FS_Flags(const char *str) {
 	char *options = strdup(str);

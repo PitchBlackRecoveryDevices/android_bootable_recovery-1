@@ -3768,7 +3768,17 @@
 				
 
 
-
+	          <listitem name="Anti-replace">
+					<actions>
+						<action function="set">tw_back=advanced</action>
+						<action function="set">tw_action=anti_replace</action>
+						<action function="set">tw_text1=0</action>
+						<action function="set">tw_action_text1=0</action>
+						<action function="set">tw_complete_text1=yes</action>
+						<action function="set">tw_slider_text=ok</action>
+						<action function="page">confirm_action</action>
+					</actions>
+				</listitem>
 
 
                 <listitem name="{@decrypt_users=Decrypt Users}">
