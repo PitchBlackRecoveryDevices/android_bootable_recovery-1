@@ -42,11 +42,11 @@
 #include "../twrpRepacker.hpp"
 #include "../openrecoveryscript.hpp"
 
-#include "install/adb_install.h"
+#include "twinstall/adb_install.h"
 
 #include "fuse_sideload.h"
 #include "blanktimer.hpp"
-#include "../twinstall.h"
+#include "twinstall.h"
 
 extern "C" {
 #include "../twcommon.h"
@@ -374,17 +374,19 @@ void GUIAction::simulate_progress_bar(void)
 
 int GUIAction::flashzip(std::string arg __unused){
 
-	
-    int op_status = 0;
-
-	operation_start("Flash");
+	int op_status = 1;
+	string result;
 	string filename;
- DataManager::GetValue("tw_filename", filename);
-	if (flash_zip(filename, 0))
-		op_status = 0; // success
-	else
-		op_status = 1; // fail
-
+	DataManager::GetValue("tw_filename", filename);
+	operation_start("Flash zip");
+	if (!simulate)
+	{
+		DataManager::SetProgress(0);
+		flash_zip(filename, 0);
+		DataManager::SetProgress(1);
+	} else
+		simulate_progress_bar();
+	op_status = 0;
 	operation_end(op_status);
 	return 0;
 }
@@ -417,6 +419,7 @@ int GUIAction::flash_zip(std::string filename, int* wipe_cache)
 		simulate_progress_bar();
 	} else {
 		ret_val = TWinstall_zip(filename.c_str(), wipe_cache);
+		PartitionManager.Unlock_Block_Partitions();
 
 		// Now, check if we need to ensure TWRP remains installed...
 		struct stat st;
@@ -1611,9 +1614,9 @@ int GUIAction::adbsideload(std::string arg __unused)
 		bool mtp_was_enabled = TWFunc::Toggle_MTP(false);
 
 		// wait for the adb connection
-		// int ret = apply_from_adb("/", &sideload_child_pid);
 		Device::BuiltinAction reboot_action = Device::REBOOT_BOOTLOADER;
-		int ret = ApplyFromAdb("/", &reboot_action);
+		int ret = twrp_sideload("/", &reboot_action);
+		sideload_child_pid = GetMiniAdbdPid();
 		DataManager::SetValue("tw_has_cancel", 0); // Remove cancel button from gui now that the zip install is going to start
 
 		if (ret != 0) {
@@ -1624,29 +1627,35 @@ int GUIAction::adbsideload(std::string arg __unused)
 			int wipe_cache = 0;
 			int wipe_dalvik = 0;
 			DataManager::GetValue("tw_wipe_dalvik", wipe_dalvik);
-
-			if (TWinstall_zip(FUSE_SIDELOAD_HOST_PATHNAME, &wipe_cache) == 0) {
-				if (wipe_cache || DataManager::GetIntValue("tw_wipe_cache"))
-					PartitionManager.Wipe_By_Path("/cache");
-				if (wipe_dalvik)
-					PartitionManager.Wipe_Dalvik_Cache();
-LOGINFO("#2");
-			} else {
-				ret = 1; // failure
-                LOGINFO("#3");
-			}
+//<<<<<<< HEAD
+//
+//			if (TWinstall_zip(FUSE_SIDELOAD_HOST_PATHNAME, &wipe_cache) == 0) {
+//				if (wipe_cache || DataManager::GetIntValue("tw_wipe_cache"))
+//					PartitionManager.Wipe_By_Path("/cache");
+//				if (wipe_dalvik)
+//					PartitionManager.Wipe_Dalvik_Cache();
+//LOGINFO("#2");
+//			} else {
+//				ret = 1; // failure
+  //              LOGINFO("#3");
+//			}
+//		}
+//		if (sideload_child_pid) {
+//			LOGINFO("Signaling child sideload process to exit.\n");
+//			struct stat st;
+//			// Calling stat() on this magic filename signals the minadbd
+//			// subprocess to shut down.
+//			stat(FUSE_SIDELOAD_HOST_EXIT_PATHNAME, &st);
+//			int status;
+//			LOGINFO("Waiting for child sideload process to exit.\n");
+//			waitpid(sideload_child_pid, &status, 0);
+//=======
+			if (wipe_cache || DataManager::GetIntValue("tw_wipe_cache"))
+				PartitionManager.Wipe_By_Path("/cache");
+			if (wipe_dalvik)
+				PartitionManager.Wipe_Dalvik_Cache();
+//>>>>>>> TeamWin/android-10.0
 		}
-		if (sideload_child_pid) {
-			LOGINFO("Signaling child sideload process to exit.\n");
-			struct stat st;
-			// Calling stat() on this magic filename signals the minadbd
-			// subprocess to shut down.
-			stat(FUSE_SIDELOAD_HOST_EXIT_PATHNAME, &st);
-			int status;
-			LOGINFO("Waiting for child sideload process to exit.\n");
-			waitpid(sideload_child_pid, &status, 0);
-		}
-		property_set("ctl.start", "adbd");
 		TWFunc::Toggle_MTP(mtp_was_enabled);
 		reinject_after_flash();
 		operation_end(ret);
@@ -1663,6 +1672,7 @@ int GUIAction::adbsideloadcancel(std::string arg __unused)
 	// Calling stat() on this magic filename signals the minadbd
 	// subprocess to shut down.
 	stat(FUSE_SIDELOAD_HOST_EXIT_PATHNAME, &st);
+	sideload_child_pid = GetMiniAdbdPid();
 	if (!sideload_child_pid) {
 		LOGERR("Unable to get child ID\n");
 		return 0;
@@ -1998,48 +2008,10 @@ int GUIAction::checkforapp(std::string arg __unused)
 	operation_start("Check for TWRP App");
 	if (!simulate)
 	{
-		string sdkverstr = TWFunc::System_Property_Get("ro.build.version.sdk");
-		int sdkver = 0;
-		if (!sdkverstr.empty()) {
-			sdkver = atoi(sdkverstr.c_str());
-		}
-		if (sdkver <= 13) {
-			if (sdkver == 0)
-				LOGINFO("Unable to read sdk version from build prop\n");
-			else
-				LOGINFO("SDK version too low for TWRP app (%i < 14)\n", sdkver);
-			DataManager::SetValue("tw_app_install_status", 1); // 0 = no status, 1 = not installed, 2 = already installed or do not install
-			goto exit;
-		}
-		if (TWFunc::Is_TWRP_App_In_System()) {
-			DataManager::SetValue("tw_app_install_status", 2); // 0 = no status, 1 = not installed, 2 = already installed or do not install
-			goto exit;
-		}
-		if (PartitionManager.Mount_By_Path("/data", false)) {
-			const char parent_path[] = "/data/app";
-			const char app_prefix[] = "me.twrp.twrpapp-";
-			DIR *d = opendir(parent_path);
-			if (d) {
-				struct dirent *p;
-				while ((p = readdir(d))) {
-					if (p->d_type != DT_DIR || strlen(p->d_name) < strlen(app_prefix) || strncmp(p->d_name, app_prefix, strlen(app_prefix)))
-						continue;
-					closedir(d);
-					LOGINFO("App found at '%s/%s'\n", parent_path, p->d_name);
-					DataManager::SetValue("tw_app_install_status", 2); // 0 = no status, 1 = not installed, 2 = already installed or do not install
-					goto exit;
-				}
-				closedir(d);
-			}
-		} else {
-			LOGINFO("Data partition cannot be mounted during app check\n");
-			DataManager::SetValue("tw_app_install_status", 2); // 0 = no status, 1 = not installed, 2 = already installed or do not install
-		}
+		TWFunc::checkforapp();
 	} else
 		simulate_progress_bar();
-	LOGINFO("App not installed\n");
-	DataManager::SetValue("tw_app_install_status", 1); // 0 = no status, 1 = not installed, 2 = already installed
-exit:
+
 	operation_end(0);
 	return 0;
 }
@@ -2152,6 +2124,7 @@ int GUIAction::installapp(std::string arg __unused)
 	} else
 		simulate_progress_bar();
 exit:
+	TWFunc::checkforapp();
 	operation_end(0);
 	return 0;
 }
@@ -2205,6 +2178,7 @@ int GUIAction::uninstalltwrpsystemapp(std::string arg __unused)
 	} else
 		simulate_progress_bar();
 exit:
+	TWFunc::checkforapp();
 	operation_end(0);
 	return 0;
 }
@@ -2316,28 +2290,43 @@ int GUIAction::anti_replace(std::string arg __unused)
 			goto exit;
 		}
 		
-//tail -c 2k  | grep "pReAVBf" 2>/dev/null
-
-		DataManager::SetProgress(.25);
+		if (!TWFunc::Path_Exists("/sbin/magiskboot")) {
+			LOGERR("Image repacking tool not present in this TWRP build!");
+			goto exit;
+		}
+		
 		std::string command = "tail -c 2k " +  part->Primary_Block_Device +  " | grep 'AVBf' 2>/dev/null";
-		TWFunc::Exec_Cmd(command, result,false);
-		if(result == ""){
+		TWFunc::Exec_Cmd(command, result, false);
+		// result AVBf means need patch
+		// else pass
+		LOGINFO("1 [result: %s]\n", result.c_str());
+		if(result ==""){
 			DataManager::SetProgress(1);
-			LOGINFO("Not arb boot. %s\n", result.c_str());
+            gui_msg("isnt_avb=This boot file isn't avb.");
+			op_status = 0;
+			goto exit;
 		}
 
 		command = "tail -c 2k " +  part->Primary_Block_Device +  " | grep 'pReAVBf' 2>/dev/null";
 		TWFunc::Exec_Cmd(command, result,false);
+		// result pReAVBf means aleady patched
+		// else pass
+		LOGINFO("2 [result: %s]\n", result.c_str());
 		if(result != ""){
 			DataManager::SetProgress(1);
-			LOGINFO("Aleady anti arb boot. %s\n", result.c_str());
-		}
-
-		command = "sbin/magiskboot hexpatch " +  part->Primary_Block_Device + " 0000000041564266000000 0070526541564266000000" ;
-		if (TWFunc::Exec_Cmd(command) != 0) {
-			gui_msg(Msg(msg::kError, "Error patching boot."));
+            gui_msg("aleady_anti_avb=This boot file is aleady anti avb boot.s");
+			op_status = 0;
 			goto exit;
 		}
+		
+		command = "/sbin/magiskboot hexpatch " +  part->Primary_Block_Device + " 0000000041564266000000 0070526541564266000000" ;
+		TWFunc::Exec_Cmd(command,result,false);
+		LOGINFO("[result: %s]\n", result.c_str());
+	    if (result.find("@") == string::npos) {
+		   //.. found.
+            gui_msg("done=Done.");
+	    }
+			
 		DataManager::SetProgress(1);
 	} else
 		simulate_progress_bar();

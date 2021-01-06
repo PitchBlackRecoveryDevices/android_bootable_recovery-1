@@ -293,11 +293,6 @@ int TWPartitionManager::Process_Fstab(string Fstab_Filename, bool Display_Error)
 	}
 //TWFunc::Update_Log_File();
 
-string Command = "resetprop ro.bootimage.build.date.utc 1546335651";
-TWFunc::Exec_Cmd(Command, false);
-string Command = "resetprop ro.build.date.utc 1546335651";
-TWFunc::Exec_Cmd(Command, false);
-                   
 //TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec3.log && echo '' > search_media_dir");
 	//Setup Apex before decryption
 	TWPartition* sys = PartitionManager.Find_Partition_By_Path(PartitionManager.Get_Android_Root_Path());
@@ -311,7 +306,7 @@ TWFunc::Exec_Cmd(Command, false);
                 if (TWFunc::Path_Exists("/vendor/build.prop")) {
                     LOGINFO("Loading stock fingerprint key..\n");
                     string Command = "resetprop ro.build.fingerprint $(cat /vendor/build.prop | grep 'ro.vendor.build.fingerprint' | cut -d'=' -f2 | tail -1)";
-                    if (TWFunc::Exec_Cmd(Command, false) == 0){
+                    if (TWFunc::Exec_Cmd(Command) == 0){
                
                 		TWFunc::Exec_Cmd("getprop ro.build.fingerprint ", false);
                 	}
@@ -2396,7 +2391,6 @@ void TWPartitionManager::Get_Partition_List(string ListType, std::vector<Partiti
 				Partition_List->push_back(part);
 			}
 		}
-		  
 	} else if (ListType == "backup") {
 		char backup_size[255];
 		unsigned long long Backup_Size;

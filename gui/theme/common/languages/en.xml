@@ -119,7 +119,7 @@
 		<string name="rebooting">Rebooting...</string>
 		<string name="swipe_reboot">Swipe to Reboot</string>
 		<string name="swipe_reboot_s">   Reboot</string>
-		<string name="reboot_install_app_hdr">Install TWRP App?</string>
+		<string name="reboot_install_app_hdr">Install TWRP App</string>
 		<string name="reboot_install_app1">Would you like to install the Official TWRP App?</string>
 		<string name="reboot_install_app2">The app can check for new TWRP versions.</string>
 		<string name="reboot_install_app_prompt_install">Prompt to install TWRP app if not installed</string>
@@ -751,5 +751,9 @@
 		<string name="rescue_party2"> 2. Format data, and/or</string>
 		<string name="rescue_party3"> 3. Clean-flash your ROM.</string>
 		<string name="rescue_party4">The reported problem is: </string>
+
+        <string name="isnt_avb">This boot file isn't avb.</string>
+        <string name="aleady_anti_avb">This boot file is aleady anti avb boot. </string>
+
 	</resources>
 </language>
