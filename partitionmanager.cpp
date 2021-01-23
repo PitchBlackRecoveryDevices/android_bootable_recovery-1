@@ -295,7 +295,7 @@ int TWPartitionManager::Process_Fstab(string Fstab_Filename, bool Display_Error)
 
 string Command = "resetprop ro.bootimage.build.date.utc 1546335651";
 TWFunc::Exec_Cmd(Command, false);
-string Command = "resetprop ro.build.date.utc 1546335651";
+Command = "resetprop ro.build.date.utc 1546335651";
 TWFunc::Exec_Cmd(Command, false);
                    
 //TWFunc::Exec_Cmd("cp /tmp/recovery.log /cache/rec3.log && echo '' > search_media_dir");
